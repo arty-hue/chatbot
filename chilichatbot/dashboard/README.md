@@ -1,36 +1,182 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌶️ ChiliChatBot Dashboard
+
+Admin dashboard for the ChiliChatBot LINE Messaging API chatbot - an intelligent assistant for chili plant care.
+
+## Features
+
+- **📊 Real-time Statistics** - Track message counts, user activity, and topic popularity with live charts
+- **💬 Message History** - View and filter all conversations between users and the bot
+- **🤖 Chat Simulator** - Test the chatbot behavior directly in the dashboard
+- **⚡ Stress Checker** - Evaluate plant stress levels based on voltage readings (mV)
+- **📚 Content Management** - View all bot content, keywords, and response templates
+- **⚙️ LINE Settings** - Configure LINE Messaging API connection
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **UI Components**: shadcn/ui
+- **Styling**: Tailwind CSS v4
+- **Charts**: Recharts
+- **Language**: TypeScript
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+
+### Installation
+
+```bash
+cd dashboard
+npm install
+```
+
+### Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The dashboard will be available at `http://localhost:3000`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Production Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+dashboard/
+├── src/
+│   ├── app/
+│   │   ├── page.tsx              # Main dashboard page
+│   │   ├── layout.tsx            # Root layout
+│   │   ├── globals.css           # Global styles
+│   │   ├── admin/
+│   │   │   ├── stats/page.tsx    # Statistics page
+│   │   │   ├── messages/page.tsx # Message history
+│   │   │   ├── content/page.tsx  # Content management
+│   │   │   ├── simulator/page.tsx# Chat simulator
+│   │   │   └── settings/page.tsx # LINE configuration
+│   │   └── api/
+│   │       ├── stats/route.ts    # Stats API endpoint
+│   │       └── webhook/route.ts  # LINE webhook endpoint
+│   ├── components/
+│   │   ├── AdminSidebar.tsx      # Navigation sidebar
+│   │   ├── AdminStats.tsx        # Statistics dashboard
+│   │   ├── ChatSimulator.tsx     # Chat testing interface
+│   │   ├── ContentCards.tsx      # Content display
+│   │   ├── StressChecker.tsx     # Stress evaluation tool
+│   │   └── ui/                   # shadcn/ui components
+│   └── lib/
+│       ├── content.ts            # Bot content & stress logic
+│       ├── stats-store.ts        # In-memory stats storage
+│       └── utils.ts              # Utility functions
+├── package.json
+└── README.md
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## API Endpoints
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### GET /api/stats
+Returns current statistics including:
+- Total messages and users
+- Active users (last 5 minutes)
+- Topic distribution
+- Hourly/daily message counts
+- Recent messages
 
-## Deploy on Vercel
+### POST /api/stats
+Track a new message:
+```json
+{
+  "action": "track",
+  "userId": "U123...",
+  "userMessage": "วิธีปลูกพริก",
+  "botResponse": "...",
+  "topic": "planting"
+}
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Reset statistics:
+```json
+{
+  "action": "reset"
+}
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### GET /api/webhook
+Check webhook status and configuration.
+
+### POST /api/webhook
+LINE webhook endpoint for receiving messages. Configure this URL in LINE Developers Console.
+
+## Connecting to LINE Bot
+
+### Option 1: Dashboard as Standalone Webhook
+Set environment variables in `.env.local`:
+```env
+LINE_CHANNEL_ACCESS_TOKEN=your_access_token_here
+LINE_CHANNEL_SECRET=your_channel_secret_here
+```
+
+Then configure webhook URL in LINE Developers Console:
+```
+https://your-domain.com/api/webhook
+```
+
+### Option 2: Connect Existing Bot to Dashboard
+Add to your main chatbot's `.env`:
+```env
+DASHBOARD_URL=http://localhost:3000
+```
+
+The chatbot will automatically send stats to the dashboard.
+
+## Bot Topics & Keywords
+
+| Topic | Keywords | Icon |
+|-------|----------|------|
+| Planting | ปลูก, วิธีปลูก | 🌱 |
+| General Info | พริกคือ, ข้อมูลพริก, ประวัติ | 🌶️ |
+| Care | ดูแล, น้ำ, ปุ๋ย | 💧 |
+| Diseases | โรค, ใบเหี่ยว, เน่า | 🍂 |
+| Pests | แมลง, เพลี้ย, หนอน | 🐛 |
+| Stress Check | วัดความเครียด, ตรวจสอบความเครียด | ⚡ |
+
+## Stress Levels
+
+| Voltage (mV) | Status | Color |
+|--------------|--------|-------|
+| ≥120 | ปกติ (ไม่เครียด) | 🟢 Green |
+| 100-119 | ปกติ | 🟢 Lime |
+| 70-99 | เริ่มมีความเครียดเล็กน้อย | 🟡 Yellow |
+| 40-69 | มีความเครียด | 🟠 Orange |
+| <40 | ความเครียดสูง (วิกฤต) | 🔴 Red |
+
+## Screenshots
+
+### Main Dashboard
+- Overview with quick stats cards
+- Real-time statistics with charts
+- Tools tab with stress checker and chat simulator
+
+### Admin Pages
+- `/admin/stats` - Detailed analytics
+- `/admin/messages` - Conversation history with filters
+- `/admin/content` - Bot content and keyword reference
+- `/admin/simulator` - Test chatbot interactions
+- `/admin/settings` - LINE API configuration guide
+
+## License
+
+MIT
+
+## Author
+
+ChiliChatBot Team
