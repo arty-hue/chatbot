@@ -1,55 +1,34 @@
 import { NextResponse } from 'next/server';
+import * as line from '@line/bot-sdk';
 import { trackMessage } from '@/lib/stats-store';
 import { content, checkStress } from '@/lib/content';
 
 // In-memory session state for stress checking
 const sessions: Map<string, string> = new Map();
 
-// LINE API configuration from environment variables
-const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET;
+// LINE SDK configuration from environment variables
+const config: line.ClientConfig = {
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
+};
 
-interface LineEvent {
-  type: string;
-  replyToken: string;
-  source: {
-    userId: string;
-    type: string;
-  };
-  message?: {
-    type: string;
-    text: string;
-  };
-}
+const middlewareConfig: line.MiddlewareConfig = {
+  channelSecret: process.env.LINE_CHANNEL_SECRET || '',
+};
 
-interface LineWebhookBody {
-  events: LineEvent[];
-}
+// Create LINE client
+const client = new line.messagingApi.MessagingApiClient(config);
 
-async function replyToLine(replyToken: string, messages: Array<{ type: string; text?: string; quickReply?: unknown }>) {
-  if (!LINE_CHANNEL_ACCESS_TOKEN) {
-    console.log('LINE_CHANNEL_ACCESS_TOKEN not set, skipping reply');
-    return;
-  }
+// Quick reply items for menu
+const quickReplyItems: line.QuickReplyItem[] = [
+  { type: "action", action: { type: "message", label: "วิธีปลูกพริก", text: "วิธีปลูกพริก" } },
+  { type: "action", action: { type: "message", label: "พริกคืออะไร?", text: "พริกคืออะไร" } },
+  { type: "action", action: { type: "message", label: "การดูแลรักษา", text: "การดูแลรักษา" } },
+  { type: "action", action: { type: "message", label: "โรคพืช", text: "โรคพืช" } },
+  { type: "action", action: { type: "message", label: "แมลงศัตรูพืช", text: "แมลงศัตรูพืช" } },
+  { type: "action", action: { type: "message", label: "ประเมินความเครียด", text: "วัดความเครียด" } },
+];
 
-  try {
-    await fetch('https://api.line.me/v2/bot/message/reply', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
-      },
-      body: JSON.stringify({
-        replyToken,
-        messages,
-      }),
-    });
-  } catch (error) {
-    console.error('Error replying to LINE:', error);
-  }
-}
-
-function processMessage(userText: string, userId: string): { replyText: string; topic: string; quickReplies?: string[] } {
+function processMessage(userText: string, userId: string): { replyText: string; topic: string } {
   const trimmedText = userText.trim();
   let replyText = '';
   let topic = 'menu';
@@ -99,41 +78,58 @@ function processMessage(userText: string, userId: string): { replyText: string; 
   return { replyText, topic };
 }
 
+// Handle LINE webhook event
+async function handleEvent(event: line.WebhookEvent): Promise<void> {
+  if (event.type !== 'message' || event.message.type !== 'text') {
+    return;
+  }
+
+  const userId = event.source.userId || 'unknown';
+  const userMessage = event.message.text;
+  const { replyText, topic } = processMessage(userMessage, userId);
+
+  // Track the message in stats
+  trackMessage(userId, userMessage, replyText, topic);
+
+  // Build reply message with LINE SDK types
+  const replyMessage: line.TextMessage = {
+    type: 'text',
+    text: replyText,
+    quickReply: topic !== 'stress' ? { items: quickReplyItems } : undefined,
+  };
+
+  // Reply using LINE SDK client
+  await client.replyMessage({
+    replyToken: event.replyToken,
+    messages: [replyMessage],
+  });
+}
+
+// Verify signature using LINE SDK
+async function verifySignature(body: string, signature: string): Promise<boolean> {
+  try {
+    return line.validateSignature(body, middlewareConfig.channelSecret, signature);
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    const body: LineWebhookBody = await request.json();
-    
-    // Process each event
-    for (const event of body.events) {
-      if (event.type !== 'message' || event.message?.type !== 'text') {
-        continue;
-      }
+    // Get raw body for signature verification
+    const rawBody = await request.text();
+    const signature = request.headers.get('x-line-signature') || '';
 
-      const userId = event.source.userId;
-      const userMessage = event.message.text;
-      const { replyText, topic } = processMessage(userMessage, userId);
-
-      // Track the message in stats
-      trackMessage(userId, userMessage, replyText, topic);
-
-      // Reply to LINE
-      const quickReplyItems = [
-        { type: "action", action: { type: "message", label: "วิธีปลูกพริก", text: "วิธีปลูกพริก" } },
-        { type: "action", action: { type: "message", label: "พริกคืออะไร?", text: "พริกคืออะไร" } },
-        { type: "action", action: { type: "message", label: "การดูแลรักษา", text: "การดูแลรักษา" } },
-        { type: "action", action: { type: "message", label: "โรคพืช", text: "โรคพืช" } },
-        { type: "action", action: { type: "message", label: "แมลงศัตรูพืช", text: "แมลงศัตรูพืช" } },
-        { type: "action", action: { type: "message", label: "ประเมินความเครียด", text: "วัดความเครียด" } },
-      ];
-
-      const messages = [{
-        type: 'text',
-        text: replyText,
-        quickReply: topic === 'menu' || topic !== 'stress' ? { items: quickReplyItems } : undefined,
-      }];
-
-      await replyToLine(event.replyToken, messages);
+    // Verify signature
+    if (middlewareConfig.channelSecret && !await verifySignature(rawBody, signature)) {
+      console.error('Invalid signature');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
+
+    const body = JSON.parse(rawBody) as { events: line.WebhookEvent[] };
+
+    // Process all events
+    await Promise.all(body.events.map(handleEvent));
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -146,7 +142,7 @@ export async function POST(request: Request) {
 export async function GET() {
   return NextResponse.json({ 
     status: 'ok', 
-    message: 'LINE Webhook endpoint ready',
-    configured: !!LINE_CHANNEL_ACCESS_TOKEN && !!LINE_CHANNEL_SECRET 
+    message: 'LINE Webhook endpoint ready (using @line/bot-sdk)',
+    configured: !!config.channelAccessToken && !!middlewareConfig.channelSecret 
   });
 }

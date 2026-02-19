@@ -17,6 +17,7 @@ Admin dashboard for the ChiliChatBot LINE Messaging API chatbot - an intelligent
 - **UI Components**: shadcn/ui
 - **Styling**: Tailwind CSS v4
 - **Charts**: Recharts
+- **LINE Integration**: @line/bot-sdk
 - **Language**: TypeScript
 
 ## Getting Started

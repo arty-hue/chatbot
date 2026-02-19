@@ -184,18 +184,21 @@ LINE_CHANNEL_SECRET=your_channel_secret_here`}
                 <span className="text-2xl">🔌</span>
                 API Endpoints
               </CardTitle>
+              <CardDescription>
+                ใช้ @line/bot-sdk สำหรับการเชื่อมต่อกับ LINE Messaging API
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 font-mono text-sm">
                 <div className="p-3 bg-muted rounded-lg">
                   <Badge className="mb-2">GET</Badge>
                   <code className="ml-2">/api/webhook</code>
-                  <p className="text-muted-foreground mt-1">ตรวจสอบสถานะ webhook</p>
+                  <p className="text-muted-foreground mt-1">ตรวจสอบสถานะ webhook และ LINE SDK</p>
                 </div>
                 <div className="p-3 bg-muted rounded-lg">
                   <Badge className="mb-2 bg-green-600">POST</Badge>
                   <code className="ml-2">/api/webhook</code>
-                  <p className="text-muted-foreground mt-1">รับข้อความจาก LINE</p>
+                  <p className="text-muted-foreground mt-1">รับข้อความจาก LINE (ใช้ LINE SDK validateSignature & MessagingApiClient)</p>
                 </div>
                 <div className="p-3 bg-muted rounded-lg">
                   <Badge className="mb-2">GET</Badge>
@@ -208,6 +211,41 @@ LINE_CHANNEL_SECRET=your_channel_secret_here`}
                   <p className="text-muted-foreground mt-1">บันทึกข้อมูลสถิติ</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* LINE SDK Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <span className="text-2xl">📦</span>
+                @line/bot-sdk
+              </CardTitle>
+              <CardDescription>
+                Dashboard นี้ใช้ LINE Bot SDK อย่างเป็นทางการสำหรับ Node.js
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="font-medium mb-2">คุณสมบัติที่ใช้:</p>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  <li>• <code>MessagingApiClient</code> - ส่งข้อความตอบกลับ</li>
+                  <li>• <code>validateSignature</code> - ตรวจสอบลายเซ็นของ webhook</li>
+                  <li>• Type definitions - TypeScript types สำหรับ LINE API</li>
+                </ul>
+              </div>
+              <Alert>
+                <AlertTitle>📖 เอกสาร</AlertTitle>
+                <AlertDescription>
+                  <a 
+                    href="https://github.com/line/line-bot-sdk-nodejs" 
+                    target="_blank" 
+                    className="text-blue-600 underline"
+                  >
+                    LINE Bot SDK for Node.js - GitHub
+                  </a>
+                </AlertDescription>
+              </Alert>
             </CardContent>
           </Card>
         </main>
