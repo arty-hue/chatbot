@@ -116,9 +116,6 @@ export default function Home() {
             <p>
               🌶️ ChiliChatBot Admin - ระบบจัดการแชทบอทผู้ช่วยดูแลพริก
             </p>
-            <p className="mt-1">
-              เชื่อมต่อกับ LINE Messaging API | พัฒนาด้วย Next.js + shadcn/ui
-            </p>
           </div>
         </main>
       </div>
